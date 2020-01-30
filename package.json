@@ -1,0 +1,17 @@
+{
+  "name": "ffmpeg-websocket",
+  "version": "1.0.0",
+  "main": "http-server.js",
+  "dependencies": {
+    "express": "^4.17.1",
+    "ws": "^7.2.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "node web-server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "Download project\r run:"
+}
