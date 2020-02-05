@@ -15,6 +15,6 @@ stream to jsmpeg using ffmpeg eg:
 stream to videojs using ffmpeg eg:
 `ffmpeg -f dshow -i video="Integrated Camera" -f webm -c vp8 -g 1 http://localhost:3000/streamer`
 
-if deploying on heroku http://localhost:3000/ is replaced by https://"$<$your app name$>$".herokuapp.com/
+if deploying on heroku http://localhost:3000/ is replaced by https://(your app name).herokuapp.com/
 
 Known bug: client must be connected before stream starts when using videojs
