@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link href="//vjs.zencdn.net/7.3.0/video-js.min.css" rel="stylesheet">
+		<script src="//vjs.zencdn.net/7.3.0/video.min.js"></script>
+	</head>
+	<body>
+		<video-js muted autoplay id=vid1 class="vjs-default-skin" type="video/webm" controls>
+		
+		<script>
+			// set up websocket
+			let HOST = location.origin.replace(/^http/, 'ws');
+			let websocket = new WebSocket(HOST);
+			websocket.binaryType = 'arraybuffer';
+			
+			// setup media
+			var mediaSource = new MediaSource();
+			var buffer;
+			var queue = [];
+			var video = document.querySelector('video-js');
+			video.src = window.URL.createObjectURL(mediaSource);
+			
+			var player = videojs('vid1');
+			player.on("play",() =>{
+				console.log("playing");
+			});
+			player.play();
+			
+			mediaSource.addEventListener('sourceopen', ()=> {
+				buffer = mediaSource.addSourceBuffer('video/webm; codecs="vp8"');
+				buffer.addEventListener('update', ()=> {
+					if (queue.length > 0 && !buffer.updating) {
+						buffer.appendBuffer(queue.shift());				  
+					}
+				});
+
+				buffer.addEventListener('updatestart', ()=>{ console.log('updatestart: ' + mediaSource.readyState); });
+				buffer.addEventListener('update', ()=>{ console.log('update: ' + mediaSource.readyState); });
+				buffer.addEventListener('updateend', ()=>{ console.log('updateend: ' + mediaSource.readyState); });
+				buffer.addEventListener('error', ()=>{ console.log('error: ' + mediaSource.readyState); });
+				buffer.addEventListener('abort', ()=>{ console.log('abort: ' + mediaSource.readyState); });		
+			
+			});
+
+			mediaSource.addEventListener('sourceopen',()=>{ console.log('sourceopen: ' + mediaSource.readyState); });
+			mediaSource.addEventListener('sourceended',()=>{ console.log('sourceended: ' + mediaSource.readyState); });
+			mediaSource.addEventListener('sourceclose',()=>{ console.log('sourceclose: ' + mediaSource.readyState); });
+			mediaSource.addEventListener('error', ()=>{ console.log('error: ' + mediaSource.readyState); });
+
+
+			websocket.onmessage = e => {
+				if (typeof e.data !== 'string') {
+					if (buffer.updating || queue.length > 0) {
+						queue.push(e.data);
+					} 
+					else {
+						buffer.appendBuffer(e.data);
+					}
+				}
+			};
+		</script>
+	</body>
+</html>

@@ -36,7 +36,16 @@ socketServer.broadcast = function(data) {
 
 // HTTP actions for client
 app.get('/', (req, res) => {
-	res.sendFile(path.resolve(__dirname, './index.html'))
+	    res.send(`
+        <a href="jsmpeg">jsmpeg</a><br>
+        <a href="videojs">videojs</a>
+    `);
+});
+app.get('/jsmpeg', (req, res) => { 
+	res.sendFile(path.resolve(__dirname, './jsmpeg.html'))
+});
+app.get('/videojs', (req, res) => { 
+	res.sendFile(path.resolve(__dirname, './videojs.html'))
 });
 app.get('/js/jsmpeg.min.js', (req, res) => {
 	res.sendFile(path.resolve(__dirname, './js/jsmpeg.min.js'))
