@@ -1,11 +1,13 @@
 {
-  "name": "ffmpeg-websocket",
+  "name": "ws-stream",
   "version": "1.0.0",
   "main": "http-server.js",
   "dependencies": {
     "bufferutil": "^4.0.1",
     "express": "^4.17.1",
+    "mux.js": "^5.5.1",
     "utf-8-validate": "^5.0.2",
+    "uuid": "^3.4.0",
     "ws": "^7.2.1"
   },
   "devDependencies": {},

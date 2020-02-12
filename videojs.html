@@ -1,63 +1,110 @@
-<!DOCTYPE html>
 <html>
-	<head>
-		<link href="//vjs.zencdn.net/7.3.0/video-js.min.css" rel="stylesheet">
-		<script src="//vjs.zencdn.net/7.3.0/video.min.js"></script>
-	</head>
-	<body>
-		<video-js muted autoplay id=vid1 class="vjs-default-skin" type="video/webm" controls>
+  <head>
+    <title>fMp4 Test</title>
+	<link href="//vjs.zencdn.net/7.3.0/video-js.min.css" rel="stylesheet">
+<script src="//vjs.zencdn.net/7.3.0/video.min.js"></script>
+  </head>
+  <body>
+	<video
+    id="my-player"
+    class="video-js"
+    controls
+	muted
+	autoplay
+    data-setup='{}'>
+  <p class="vjs-no-js">
+    To view this video please enable JavaScript, and consider upgrading to a
+    web browser that
+    <a href="https://videojs.com/html5-video-support/" target="_blank">
+      supports HTML5 video
+    </a>
+  </p>
+</video>
+	
+    <script src="js/mux.js"></script>
+    <script>
+		// Create array for fmp4
+		var segments = [];
+		var i =0;
+
+		// set up websocket
+		let HOST = location.origin.replace(/^http/, 'ws');
+		let websocket = new WebSocket(HOST);
+		websocket.binaryType = 'arraybuffer';
+
+		// set up media source
+		const mime = 'video/mp4; codecs="avc1.42C01F"';
+		let mediaSource = new MediaSource();
+		video = document.querySelector('video');
+		video.src = URL.createObjectURL(mediaSource);
+
 		
-		<script>
-			// set up websocket
-			let HOST = location.origin.replace(/^http/, 'ws');
-			let websocket = new WebSocket(HOST);
-			websocket.binaryType = 'arraybuffer';
+		var sourceBuffer = {"updating" : true};
+		mediaSource.addEventListener("sourceopen", wait);
+		
+		// muxer is only used for debugging data type with inspect tool
+		var transmuxer = new muxjs.mp4.Transmuxer();
+		
+		// append with a special init header
+		function appendFirstSegment(){
+			URL.revokeObjectURL(video.src);
+			sourceBuffer = mediaSource.addSourceBuffer(mime);
+			ftype = segments.shift();
+			moov = segments.shift();
+			init = new Uint8Array(ftype.byteLength + moov.byteLength);
+			init.set(ftype,0);
+			init.set(moov,ftype.byteLength);
 			
-			// setup media
-			var mediaSource = new MediaSource();
-			var buffer;
-			var queue = [];
-			var video = document.querySelector('video-js');
-			video.src = window.URL.createObjectURL(mediaSource);
+			// console.log(muxjs.mp4.tools.inspect(init));
+			sourceBuffer.appendBuffer(init);
+			sourceBuffer.addEventListener('update', appendNextSegment);
 			
-			var player = videojs('vid1');
-			player.on("play",() =>{
-				console.log("playing");
-			});
-			player.play();
-			
-			mediaSource.addEventListener('sourceopen', ()=> {
-				buffer = mediaSource.addSourceBuffer('video/webm; codecs="vp8"');
-				buffer.addEventListener('update', ()=> {
-					if (queue.length > 0 && !buffer.updating) {
-						buffer.appendBuffer(queue.shift());				  
-					}
-				});
+			//--------------------- debugging ---------------
+			sourceBuffer.addEventListener('updatestart', e=> { console.log('updatestart: ' + mediaSource.readyState); });
+			sourceBuffer.addEventListener('update', e=> { console.log('update: ' + mediaSource.readyState); });
+			sourceBuffer.addEventListener('updateend', e=> { console.log('updateend: ' + mediaSource.readyState); });
+			sourceBuffer.addEventListener('error', e=> { console.log('error: ' + mediaSource.readyState); });
+			sourceBuffer.addEventListener('abort', e=> { console.log('abort: ' + mediaSource.readyState); });
+		}
+		
+		// then just append normally 
+		function appendNextSegment(){
+			if (segments.length > 0 && !sourceBuffer.updating){
+				next = segments.shift();
+				next = new Uint8Array(next);
+				sourceBuffer.appendBuffer(next);
+				console.log("Buffered segments: " + segments.length);
+			}
+		}
+		
+		// timeout until init segments have been recieved
+		function wait(){
+			if (segments.length > 2) {	
+				appendFirstSegment();
+			}
+			else {
+			setTimeout(wait, 1);
+			}
+		}; 
 
-				buffer.addEventListener('updatestart', ()=>{ console.log('updatestart: ' + mediaSource.readyState); });
-				buffer.addEventListener('update', ()=>{ console.log('update: ' + mediaSource.readyState); });
-				buffer.addEventListener('updateend', ()=>{ console.log('updateend: ' + mediaSource.readyState); });
-				buffer.addEventListener('error', ()=>{ console.log('error: ' + mediaSource.readyState); });
-				buffer.addEventListener('abort', ()=>{ console.log('abort: ' + mediaSource.readyState); });		
-			
-			});
-
-			mediaSource.addEventListener('sourceopen',()=>{ console.log('sourceopen: ' + mediaSource.readyState); });
-			mediaSource.addEventListener('sourceended',()=>{ console.log('sourceended: ' + mediaSource.readyState); });
-			mediaSource.addEventListener('sourceclose',()=>{ console.log('sourceclose: ' + mediaSource.readyState); });
-			mediaSource.addEventListener('error', ()=>{ console.log('error: ' + mediaSource.readyState); });
-
-
-			websocket.onmessage = e => {
-				if (typeof e.data !== 'string') {
-					if (buffer.updating || queue.length > 0) {
-						queue.push(e.data);
-					} 
-					else {
-						buffer.appendBuffer(e.data);
-					}
-				}
-			};
-		</script>
-	</body>
+		// websocket message actions 
+		websocket.onmessage = e => {
+			data = new Uint8Array(e.data);
+			if(sourceBuffer.updating || segments.length > 0){
+				segments.push(data);
+				console.log("Buffered segments: " + segments.length);
+			}else{
+				//console.log(muxjs.mp4.tools.inspect(data));
+				sourceBuffer.appendBuffer(data);
+			}
+		};
+		
+		//--------------------- debugging ---------------
+		mediaSource.addEventListener('sourceopen', e=> { console.log('sourceopen: ' + mediaSource.readyState); });
+		mediaSource.addEventListener('sourceended', e=> { console.log('sourceended: ' + mediaSource.readyState); });
+		mediaSource.addEventListener('sourceclose', e=> { console.log('sourceclose: ' + mediaSource.readyState); });
+		mediaSource.addEventListener('error', e=> { console.log('error: ' + mediaSource.readyState); });
+    </script>
+  </body>
 </html>
+

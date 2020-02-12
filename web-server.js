@@ -1,10 +1,13 @@
 const path = require('path'),
 	express = require('express'),
 	http = require('http'),
-	WebSocket = require('ws');
-
+	WebSocket = require('ws'),
+	uuidv4 = require('uuid/v4'),
+	muxjs = require('mux.js');
+	
 const app = express();
 const httpServer = http.createServer(app);
+var transmuxer = new muxjs.mp4.Transmuxer();
 
 const PORT = process.env.PORT || 3000;
 
@@ -14,14 +17,23 @@ const socketServer = new WebSocket.Server({server: httpServer}, () => {
 });
 
 // just logging number of connected clients
-socketServer.connectionCount = 0;
+connectedClients = {};
 socketServer.on('connection', (socket, req) => {
-	socketServer.connectionCount++;
-	console.log(socketServer.connectionCount+' clients connected');
 	
-	socket.on('close', ()=>{
-		socketServer.connectionCount--;
-		console.log(socketServer.connectionCount+' clients connected');
+	// assign each client a unique ID
+	socket.id = uuidv4();
+	connectedClients[socket.id] = false;
+	console.log(Object.keys(connectedClients).length +' clients connected');
+	
+	socket.on('close', () => {
+		delete connectedClients[socket.id];
+		console.log(Object.keys(connectedClients).length +' clients connected');
+	});
+	socket.on('message', (message) => {
+		if (message == "ready") {
+			console.log('client ready!');
+			connectedClients[socket.id] = true;
+		}
 	});
 });
 
@@ -29,7 +41,7 @@ socketServer.on('connection', (socket, req) => {
 socketServer.broadcast = function(data) {
 	socketServer.clients.forEach(function each(client) {
 		if (client.readyState === WebSocket.OPEN) {
-			client.send(data);
+				client.send(data);
 		}
 	});
 };
@@ -50,14 +62,18 @@ app.get('/videojs', (req, res) => {
 app.get('/js/jsmpeg.min.js', (req, res) => {
 	res.sendFile(path.resolve(__dirname, './js/jsmpeg.min.js'))
 });
+app.get('/js/mux.js', (req, res) => {
+	res.sendFile(path.resolve(__dirname, './js/mux.js'))
+});
+
 
 // HTTP actions for streamer
 app.all('/streamer', (req, res) => {
 	var i=0;
 	req.on('data', data => {
-		i++;
-		if(i==1){console.log('Data incoming..')}
+		if(i==0){console.log('Data incoming..')}
 		socketServer.broadcast(data);
+		i++;
 	});
 	req.on('end',() => {
 		i=0; 
