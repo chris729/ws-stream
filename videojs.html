@@ -32,8 +32,9 @@
 		let websocket = new WebSocket(HOST);
 		websocket.binaryType = 'arraybuffer';
 
-		// set up media source
-		const mime = 'video/mp4; codecs="avc1.42C01F"';
+		// set up media source for video or audio
+		const mime = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
+		//const mime = 'audio/mp4; codecs="mp4a.40.2"';
 		let mediaSource = new MediaSource();
 		video = document.querySelector('video');
 		video.src = URL.createObjectURL(mediaSource);
