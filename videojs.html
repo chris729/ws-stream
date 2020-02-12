@@ -37,7 +37,8 @@
 		let mediaSource = new MediaSource();
 		video = document.querySelector('video');
 		video.src = URL.createObjectURL(mediaSource);
-
+		var player = videojs('my-player');
+		player.play();
 		
 		var sourceBuffer = {"updating" : true};
 		mediaSource.addEventListener("sourceopen", wait);

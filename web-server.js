@@ -22,18 +22,12 @@ socketServer.on('connection', (socket, req) => {
 	
 	// assign each client a unique ID
 	socket.id = uuidv4();
-	connectedClients[socket.id] = false;
+	connectedClients[socket.id] = true;
 	console.log(Object.keys(connectedClients).length +' clients connected');
 	
 	socket.on('close', () => {
 		delete connectedClients[socket.id];
 		console.log(Object.keys(connectedClients).length +' clients connected');
-	});
-	socket.on('message', (message) => {
-		if (message == "ready") {
-			console.log('client ready!');
-			connectedClients[socket.id] = true;
-		}
 	});
 });
 
@@ -48,10 +42,10 @@ socketServer.broadcast = function(data) {
 
 // HTTP actions for client
 app.get('/', (req, res) => {
-	    res.send(`
-        <a href="jsmpeg">jsmpeg</a><br>
-        <a href="videojs">videojs</a>
-    `);
+	    res.send(
+		`<a href="jsmpeg">jsmpeg</a><br>
+         <a href="videojs">videojs</a>`
+		);
 });
 app.get('/jsmpeg', (req, res) => { 
 	res.sendFile(path.resolve(__dirname, './jsmpeg.html'))
