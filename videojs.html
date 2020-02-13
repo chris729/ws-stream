@@ -33,8 +33,11 @@
 		websocket.binaryType = 'arraybuffer';
 
 		// set up media source for video or audio
+		// -------------------------------------------------------
 		const mime = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
 		//const mime = 'audio/mp4; codecs="mp4a.40.2"';
+		//--------------------------------------------------------
+		
 		let mediaSource = new MediaSource();
 		video = document.querySelector('video');
 		video.src = URL.createObjectURL(mediaSource);
@@ -67,9 +70,10 @@
 			sourceBuffer.addEventListener('updateend', e=> { console.log('updateend: ' + mediaSource.readyState); });
 			sourceBuffer.addEventListener('error', e=> { console.log('error: ' + mediaSource.readyState); });
 			sourceBuffer.addEventListener('abort', e=> { console.log('abort: ' + mediaSource.readyState); });
+			//--------------------- debugging ---------------
 		}
 		
-		// then just append normally 
+		// while an update occurs try to push anything out of the segment buffer into the source buffer
 		function appendNextSegment(){
 			if (segments.length > 0 && !sourceBuffer.updating){
 				next = segments.shift();
@@ -92,10 +96,12 @@
 		// websocket message actions 
 		websocket.onmessage = e => {
 			data = new Uint8Array(e.data);
+			// if source buffer is busy add to segment buffer
 			if(sourceBuffer.updating || segments.length > 0){
 				segments.push(data);
 				console.log("Buffered segments: " + segments.length);
 			}else{
+				// otherwise add straight to the source buffer
 				//console.log(muxjs.mp4.tools.inspect(data));
 				sourceBuffer.appendBuffer(data);
 			}
@@ -106,7 +112,8 @@
 		mediaSource.addEventListener('sourceended', e=> { console.log('sourceended: ' + mediaSource.readyState); });
 		mediaSource.addEventListener('sourceclose', e=> { console.log('sourceclose: ' + mediaSource.readyState); });
 		mediaSource.addEventListener('error', e=> { console.log('error: ' + mediaSource.readyState); });
-    </script>
+		//--------------------- debugging ---------------
+	</script>
   </body>
 </html>
 
