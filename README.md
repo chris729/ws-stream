@@ -20,5 +20,3 @@ Audio can be streamed to videojs by changing the mime source in the videojs.html
 
 
 if deploying on heroku http://localhost:3000/ is replaced by https://(your app name).herokuapp.com/
-
-Known bug: client must be connected before stream starts when using videojs stream. This is because the first two segments sent contain the initialisation data.

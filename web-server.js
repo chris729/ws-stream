@@ -8,6 +8,8 @@ const path = require('path'),
 const app = express();
 const httpServer = http.createServer(app);
 var transmuxer = new muxjs.mp4.Transmuxer();
+var rdy = false;
+var init = [];
 
 const PORT = process.env.PORT || 3000;
 
@@ -24,6 +26,12 @@ socketServer.on('connection', (socket, req) => {
 	socket.id = uuidv4();
 	connectedClients[socket.id] = true;
 	console.log(Object.keys(connectedClients).length +' clients connected');
+	
+	// always send the init blocks as soon as a client connects
+	if(rdy){
+		socket.send(init[0]);
+		socket.send(init[1]);
+	}
 	
 	socket.on('close', () => {
 		delete connectedClients[socket.id];
@@ -65,12 +73,19 @@ app.get('/js/mux.js', (req, res) => {
 app.all('/streamer', (req, res) => {
 	var i=0;
 	req.on('data', data => {
+		// first two chunks of data will be ftype and moov for init block
 		if(i==0){console.log('Data incoming..')}
-		socketServer.broadcast(data);
+		if(i<2){
+			init.push(data);
+			rdy = true;
+		}
+		else{socketServer.broadcast(data)};
 		i++;
 	});
 	req.on('end',() => {
 		i=0; 
+		rdy = false; 
+		init = [];
 		console.log('Data stopped.')
 	});
 });

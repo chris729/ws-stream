@@ -54,6 +54,11 @@
 		function appendFirstSegment(){
 			URL.revokeObjectURL(video.src);
 			sourceBuffer = mediaSource.addSourceBuffer(mime);
+			
+			// set mode to sequence so the user can join a stream at anytime
+			var myMode = sourceBuffer.mode;
+			sourceBuffer.mode = 'sequence';
+			
 			ftype = segments.shift();
 			moov = segments.shift();
 			init = new Uint8Array(ftype.byteLength + moov.byteLength);
