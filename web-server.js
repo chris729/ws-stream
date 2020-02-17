@@ -8,8 +8,7 @@ const path = require('path'),
 const app = express();
 const httpServer = http.createServer(app);
 var transmuxer = new muxjs.mp4.Transmuxer();
-var rdy = false;
-var init = [];
+var initBlock = [];
 
 const PORT = process.env.PORT || 3000;
 
@@ -19,31 +18,38 @@ const socketServer = new WebSocket.Server({server: httpServer}, () => {
 });
 
 // just logging number of connected clients
-connectedClients = {};
+initClient = {};
 socketServer.on('connection', (socket, req) => {
 	
-	// assign each client a unique ID
+	// assign each new client a unique ID
 	socket.id = uuidv4();
-	connectedClients[socket.id] = true;
-	console.log(Object.keys(connectedClients).length +' clients connected');
+	initClient[socket.id] = false;
+	console.log(Object.keys(initClient).length +' clients connected');
 	
 	// always send the init blocks as soon as a client connects
-	if(rdy){
-		socket.send(init[0]);
-		socket.send(init[1]);
+	if(!initClient[socket.id]){
+		ftype = initBlock[0];
+		moov = initBlock[1];
+		//console.log(muxjs.mp4.tools.inspect(ftype));
+		//console.log(muxjs.mp4.tools.inspect(moov));
+		socket.send(ftype);
+		socket.send(moov);
+		initClient[socket.id] = true;
 	}
 	
 	socket.on('close', () => {
-		delete connectedClients[socket.id];
-		console.log(Object.keys(connectedClients).length +' clients connected');
+		// on websocket closure remove the client
+		delete initClient[socket.id];
+		console.log(Object.keys(initClient).length +' clients connected');
 	});
 });
 
 // broadcast function
 socketServer.broadcast = function(data) {
 	socketServer.clients.forEach(function each(client) {
-		if (client.readyState === WebSocket.OPEN) {
-				client.send(data);
+		if ((client.readyState === WebSocket.OPEN) && initClient[client.id]) {
+			//console.log('Data sent');
+			client.send(data);
 		}
 	});
 };
@@ -52,14 +58,18 @@ socketServer.broadcast = function(data) {
 app.get('/', (req, res) => {
 	    res.send(
 		`<a href="jsmpeg">jsmpeg</a><br>
-         <a href="videojs">videojs</a>`
+         <a href="fMP4-video">fMP4 video</a><br>
+		 <a href="fMP4-audio">fMP4 audio</a>`
 		);
+});
+app.get('/fMP4-video', (req, res) => { 
+	res.sendFile(path.resolve(__dirname, './fMP4-video.html'))
+});
+app.get('/fMP4-audio', (req, res) => { 
+	res.sendFile(path.resolve(__dirname, './fMP4-audio.html'))
 });
 app.get('/jsmpeg', (req, res) => { 
 	res.sendFile(path.resolve(__dirname, './jsmpeg.html'))
-});
-app.get('/videojs', (req, res) => { 
-	res.sendFile(path.resolve(__dirname, './videojs.html'))
 });
 app.get('/js/jsmpeg.min.js', (req, res) => {
 	res.sendFile(path.resolve(__dirname, './js/jsmpeg.min.js'))
@@ -74,18 +84,20 @@ app.all('/streamer', (req, res) => {
 	var i=0;
 	req.on('data', data => {
 		// first two chunks of data will be ftype and moov for init block
-		if(i==0){console.log('Data incoming..')}
-		if(i<2){
-			init.push(data);
-			rdy = true;
+		if(i==0){
+			console.log('Data incoming..');
 		}
-		else{socketServer.broadcast(data)};
-		i++;
+		if(i<2){
+			initBlock.push(data);
+			i++;
+		}
+		else{
+			socketServer.broadcast(data);
+		}
 	});
 	req.on('end',() => {
 		i=0; 
-		rdy = false; 
-		init = [];
+		initBlock = [];
 		console.log('Data stopped.')
 	});
 });

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>fMp4 video</title>
+	<link href="//vjs.zencdn.net/7.3.0/video-js.min.css" rel="stylesheet">
+<script src="//vjs.zencdn.net/7.3.0/video.min.js"></script>
+  </head>
+  <body>
+ <video
+    id="my-player"
+    class="video-js" 
+    controls
+	muted
+	autoplay
+    data-setup='{}'>
+  <p class="vjs-no-js">
+    To view this video please enable JavaScript, and consider upgrading to a
+    web browser that
+    <a href="https://videojs.com/html5-video-support/" target="_blank">
+      supports HTML5 video
+    </a>
+  </p>
+</video>
+	
+    <script src="js/mux.js"></script>
+    <script>
+		// Create array for fmp4
+		var segments = [];
+		var i =0;
+
+		// set up websocket
+		let HOST = location.origin.replace(/^http/, 'ws');
+		let websocket = new WebSocket(HOST);
+		websocket.binaryType = 'arraybuffer';
+
+		// set up media source for video	
+		const mime = 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"';
+		let mediaSource = new MediaSource();
+		video = document.querySelector('video');
+		video.src = URL.createObjectURL(mediaSource);
+		var player = videojs('my-player');
+		player.play();
+		
+		var sourceBuffer = {"updating" : true};
+		mediaSource.addEventListener("sourceopen", wait);
+		
+		// muxer is only used for debugging data type with inspect tool
+		var transmuxer = new muxjs.mp4.Transmuxer();
+		
+		// append with a special init header
+		function appendFirstSegment(){
+			URL.revokeObjectURL(video.src);
+			sourceBuffer = mediaSource.addSourceBuffer(mime);
+			
+			// set mode to sequence so the user can join a stream at anytime
+			var myMode = sourceBuffer.mode;
+			sourceBuffer.mode = 'sequence';
+			
+			ftype = segments.shift();
+			moov = segments.shift();
+			init = new Uint8Array(ftype.byteLength + moov.byteLength);
+			init.set(ftype,0);
+			init.set(moov,ftype.byteLength);
+			
+			// console.log(muxjs.mp4.tools.inspect(init));
+			sourceBuffer.appendBuffer(init);
+			sourceBuffer.addEventListener('update', appendNextSegment);
+		}
+		
+		// while an update occurs try to push anything out of the segment buffer into the source buffer
+		function appendNextSegment(){
+			if (segments.length > 0 && !sourceBuffer.updating){
+				next = segments.shift();
+				next = new Uint8Array(next);
+				sourceBuffer.appendBuffer(next);
+				console.log("Buffered segments: " + segments.length);
+			}
+		}
+		
+		// timeout until init segments have been recieved
+		function wait(){
+			if (segments.length > 2) {	
+				appendFirstSegment();
+			}
+			else {
+			setTimeout(wait, 1);
+			}
+		}; 
+
+		// websocket message actions 
+		websocket.onmessage = e => {
+			data = new Uint8Array(e.data);
+			// if source buffer is busy add to segment buffer
+			if(sourceBuffer.updating || segments.length > 0){
+				segments.push(data);
+				console.log("Buffered segments: " + segments.length);
+			}else{
+				// otherwise add straight to the source buffer
+				//console.log(muxjs.mp4.tools.inspect(data));
+				sourceBuffer.appendBuffer(data);
+			}
+		};
+	</script>
+  </body>
+</html>
+
