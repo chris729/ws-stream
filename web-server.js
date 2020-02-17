@@ -3,6 +3,7 @@ const path = require('path'),
 	http = require('http'),
 	WebSocket = require('ws'),
 	uuidv4 = require('uuid/v4'),
+	ffmpeg = require('fluent-ffmpeg'),
 	muxjs = require('mux.js');
 	
 const app = express();
@@ -13,9 +14,10 @@ var initBlock = [];
 const PORT = process.env.PORT || 3000;
 
 // create a socket server
-const socketServer = new WebSocket.Server({server: httpServer}, () => {
-	console.log(`WS server is listening at ws://localhost:${WS_PORT}`)
-});
+const socketServer = new WebSocket.Server({
+	perMessageDeflate: false,
+	server: httpServer
+	});
 
 // just logging number of connected clients
 initClient = {};
@@ -46,44 +48,54 @@ socketServer.on('connection', (socket, req) => {
 
 // broadcast function
 socketServer.broadcast = function(data) {
-	socketServer.clients.forEach(function each(client) {
-		if ((client.readyState === WebSocket.OPEN) && initClient[client.id]) {
-			//console.log('Data sent');
+	socketServer.clients.forEach(function each(client){
+		if((client.readyState === 1) && initClient[client.id]){
 			client.send(data);
 		}
 	});
 };
 
-// HTTP actions for client
-app.get('/', (req, res) => {
-	    res.send(
-		`<a href="jsmpeg">jsmpeg</a><br>
-         <a href="fMP4-video">fMP4 video</a><br>
-		 <a href="fMP4-audio">fMP4 audio</a>`
-		);
-});
-app.get('/fMP4-video', (req, res) => { 
-	res.sendFile(path.resolve(__dirname, './fMP4-video.html'))
-});
-app.get('/fMP4-audio', (req, res) => { 
-	res.sendFile(path.resolve(__dirname, './fMP4-audio.html'))
-});
-app.get('/jsmpeg', (req, res) => { 
-	res.sendFile(path.resolve(__dirname, './jsmpeg.html'))
-});
-app.get('/js/jsmpeg.min.js', (req, res) => {
-	res.sendFile(path.resolve(__dirname, './js/jsmpeg.min.js'))
-});
-app.get('/js/mux.js', (req, res) => {
-	res.sendFile(path.resolve(__dirname, './js/mux.js'))
-});
+var input = process.stdin;
+console.log("Please enter rtmp feed and type (v/a): ");
+console.log("eg. rtmp://localhost:3000 v");
 
+type = 'v';
 
-// HTTP actions for streamer
-app.all('/streamer', (req, res) => {
-	var i=0;
-	req.on('data', data => {
+input.on('data', data => {
+	data = String(data).split(' ');
+	let feedUrl = String(data[0]).trim();
+	type = String(data[1]).trim();
+	
+	if (type == 'a'){
+		console.log('audio streaming');
+		video = ffmpeg(feedUrl, { timeout: 432000 }).addOptions([
+		// can change options here - must be supported by browser
+			'-vn',
+			'-c:a aac',
+			'-b:a 192k', 
+			'-f mp4', 
+			'-movflags empty_moov+default_base_moof+frag_every_frame' 
+		]).pipe()
+	} 
+	else {
+		console.log('video streaming');
+		video = ffmpeg(feedUrl, { timeout: 432000 }).addOptions([
+		// can change options here - must be supported by browser
+			'-c:v libx264',
+			'-c:a aac',
+			'-b:a 44k',
+			'-vf format=yuv420p',
+			'-profile:v baseline',
+			'-level 3.1',
+			'-b:v 900k', 
+			'-f mp4', 
+			'-movflags empty_moov+default_base_moof+frag_every_frame' 
+		]).pipe()
+	}
+	i=0;
+	video.on('data', data => {
 		// first two chunks of data will be ftype and moov for init block
+		//console.log(muxjs.mp4.tools.inspect(data));
 		if(i==0){
 			console.log('Data incoming..');
 		}
@@ -94,14 +106,19 @@ app.all('/streamer', (req, res) => {
 		else{
 			socketServer.broadcast(data);
 		}
-	});
-	req.on('end',() => {
-		i=0; 
-		initBlock = [];
-		console.log('Data stopped.')
-	});
-});
+	})
+})
 
-httpServer.listen(PORT, () => {
-	console.log(`HTTP server listening at http://localhost:${PORT}`)
+// HTTP actions for client
+app.get('/', (req, res) => { 
+	if(type == 'a'){
+		res.sendFile(path.resolve(__dirname, './fMP4-audio.html'))
+	}else{	
+		res.sendFile(path.resolve(__dirname, './fMP4-video.html'))
+	}
+	
 });
+app.get('/js/mux.js', (req, res) => {
+	res.sendFile(path.resolve(__dirname, './js/mux.js'))
+});
+httpServer.listen(PORT);
