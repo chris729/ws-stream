@@ -12,6 +12,8 @@ var transmuxer = new muxjs.mp4.Transmuxer();
 var initBlock = [];
 
 const PORT = process.env.PORT || 3000;
+const FEED = process.env.FEED || false;
+const type = 'v';
 
 // create a socket server
 const socketServer = new WebSocket.Server({
@@ -55,50 +57,46 @@ socketServer.broadcast = function(data) {
 	});
 };
 
-/*
-var input = process.stdin;
-console.log("Please enter rtmp feed and type (v/a): ");
-console.log("eg. rtmp://localhost:3000 v");
+// if you have a audio feed
+if (type == 'a' && FEED){
+	console.log('audio streaming');
+	video = ffmpeg(FEED, { timeout: 432000 }).addOptions([
+	// can change options here - must be supported by browser
+		'-vn',
+		'-c:a aac',
+		'-b:a 192k', 
+		'-f mp4', 
+		'-movflags empty_moov+default_base_moof+frag_every_frame' 
+	]).pipe();
+	startFeed();
+}
+// if you have a video feed 
+else if (type == 'v' && FEED){
+	console.log('video streaming');
+	video = ffmpeg(FEED, { timeout: 432000 }).addOptions([
+	// can change options here - must be supported by browser
+		'-c:v libx264',
+		'-c:a aac',
+		'-b:a 44k',
+		'-vf format=yuv420p',
+		'-profile:v baseline',
+		'-level 3.1',
+		'-b:v 900k', 
+		'-f mp4', 
+		'-movflags empty_moov+default_base_moof+frag_every_frame' 
+	]).pipe();
+	startFeed();
+}
+// feed coming via http
+else {
+	console.log('http feed');
+	app.all("/streamer", (req, res) => {
+		video = req;
+		startFeed();
+	});	
+}
 
-type = 'v';
-
-input.on('data', data => {
-	
-	data = String(data).split(' ');
-	let feedUrl = String(data[0]).trim();
-	type = String(data[1]).trim();
-	*/
-	
-	// testing on heroku with ffmpeg pack
-	let type = 'v';
-	let feedUrl = 'rtmp://aflradio.wow1.vosm.privatemediacloudservice.telstra.com/live/racingvic';
-	
-	if (type == 'a'){
-		console.log('audio streaming');
-		video = ffmpeg(feedUrl, { timeout: 432000 }).addOptions([
-		// can change options here - must be supported by browser
-			'-vn',
-			'-c:a aac',
-			'-b:a 192k', 
-			'-f mp4', 
-			'-movflags empty_moov+default_base_moof+frag_every_frame' 
-		]).pipe()
-	} 
-	else {
-		console.log('video streaming');
-		video = ffmpeg(feedUrl, { timeout: 432000 }).addOptions([
-		// can change options here - must be supported by browser
-			'-c:v libx264',
-			'-c:a aac',
-			'-b:a 44k',
-			'-vf format=yuv420p',
-			'-profile:v baseline',
-			'-level 3.1',
-			'-b:v 900k', 
-			'-f mp4', 
-			'-movflags empty_moov+default_base_moof+frag_every_frame' 
-		]).pipe()
-	}
+function startFeed() {
 	i=0;
 	video.on('data', data => {
 		// first two chunks of data will be ftype and moov for init block
@@ -114,8 +112,7 @@ input.on('data', data => {
 			socketServer.broadcast(data);
 		}
 	})
-//})
-
+}
 // HTTP actions for client
 app.get('/', (req, res) => { 
 	if(type == 'a'){
