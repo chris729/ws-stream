@@ -88,7 +88,7 @@ input.on('data', data => {
 		console.log('video streaming');
 		video = ffmpeg(feedUrl, { timeout: 432000 }).addOptions([
 		// can change options here - must be supported by browser
-			'-c:v libx264',
+			'-c:v h264',
 			'-c:a aac',
 			'-b:a 44k',
 			'-vf format=yuv420p',
