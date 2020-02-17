@@ -69,7 +69,7 @@ input.on('data', data => {
 	type = String(data[1]).trim();
 	*/
 	
-	// testing on heroku with buildpack
+	// testing on heroku with buildpacks
 	let type = 'v';
 	let feedUrl = 'rtmp://aflradio.wow1.vosm.privatemediacloudservice.telstra.com/live/racingvic';
 	
