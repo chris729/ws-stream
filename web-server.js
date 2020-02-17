@@ -69,7 +69,7 @@ input.on('data', data => {
 	type = String(data[1]).trim();
 	*/
 	
-	// testing on heroku with buildpacks
+	// testing on heroku
 	let type = 'v';
 	let feedUrl = 'rtmp://aflradio.wow1.vosm.privatemediacloudservice.telstra.com/live/racingvic';
 	
@@ -88,7 +88,7 @@ input.on('data', data => {
 		console.log('video streaming');
 		video = ffmpeg(feedUrl, { timeout: 432000 }).addOptions([
 		// can change options here - must be supported by browser
-			'-c:v h264',
+			'-c:v libx264',
 			'-c:a aac',
 			'-b:a 44k',
 			'-vf format=yuv420p',
