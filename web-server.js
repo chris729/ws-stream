@@ -112,7 +112,7 @@ input.on('data', data => {
 			socketServer.broadcast(data);
 		}
 	})
-})
+//})
 
 // HTTP actions for client
 app.get('/', (req, res) => { 
