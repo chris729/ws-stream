@@ -55,6 +55,7 @@ socketServer.broadcast = function(data) {
 	});
 };
 
+/*
 var input = process.stdin;
 console.log("Please enter rtmp feed and type (v/a): ");
 console.log("eg. rtmp://localhost:3000 v");
@@ -62,9 +63,13 @@ console.log("eg. rtmp://localhost:3000 v");
 type = 'v';
 
 input.on('data', data => {
+	
 	data = String(data).split(' ');
 	let feedUrl = String(data[0]).trim();
 	type = String(data[1]).trim();
+	*/
+	let type = 'v';
+	let feedUrl = 'rtmp://aflradio.wow1.vosm.privatemediacloudservice.telstra.com/live/racingvic';
 	
 	if (type == 'a'){
 		console.log('audio streaming');
