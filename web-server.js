@@ -48,7 +48,7 @@ socketServer.on('connection', (socket, req) => {
 	});
 });
 
-// broadcast function
+// broadcast to each client if they're ready and initalised 
 socketServer.broadcast = function(data) {
 	socketServer.clients.forEach(function each(client){
 		if((client.readyState === 1) && initClient[client.id]){
@@ -57,7 +57,7 @@ socketServer.broadcast = function(data) {
 	});
 };
 
-// if you have a audio feed
+// if you have a direct audio feed
 if (type == 'a' && FEED){
 	console.log('audio streaming');
 	video = ffmpeg(FEED, { timeout: 432000 }).addOptions([
@@ -70,7 +70,7 @@ if (type == 'a' && FEED){
 	]).pipe();
 	startFeed();
 }
-// if you have a video feed 
+// if you have a direct video feed 
 else if (type == 'v' && FEED){
 	console.log('video streaming');
 	video = ffmpeg(FEED, { timeout: 432000 }).addOptions([
@@ -87,7 +87,7 @@ else if (type == 'v' && FEED){
 	]).pipe();
 	startFeed();
 }
-// feed coming via http
+// if you don't have a direct feed you can send via ffmpeg to http://localhost:3000/streamer
 else {
 	console.log('http feed');
 	app.all("/streamer", (req, res) => {
