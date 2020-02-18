@@ -66,7 +66,7 @@ if (type == 'a' && FEED){
 		'-c:a aac',
 		'-b:a 192k', 
 		'-f mp4', 
-		'-movflags frag_keyframe+empty_moov+default_base_moof' 
+		'-movflags frag_every_frame+empty_moov+default_base_moof' 
 	]).pipe();
 	startFeed();
 }
@@ -83,7 +83,7 @@ else if (type == 'v' && FEED){
 		'-level 3.1',
 		'-b:v 900k', 
 		'-f mp4', 
-		'-movflags frag_keyframe+empty_moov+default_base_moof' 
+		'-movflags frag_every_frame+empty_moov+default_base_moof' 
 	]).pipe();
 	startFeed();
 }
