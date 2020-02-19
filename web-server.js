@@ -13,7 +13,7 @@ var initBlock = [];
 
 const PORT = process.env.PORT || 3000;
 const FEED = process.env.FEED || false;
-const TYPE = process.env.FEED || 'v';
+const TYPE = process.env.TYPE || 'v';
 
 // create a socket server
 const socketServer = new WebSocket.Server({
@@ -58,7 +58,7 @@ socketServer.broadcast = function(data) {
 };
 
 // if you have a direct audio feed
-if (type == 'a' && FEED){
+if (TYPE == 'a' && FEED){
 	console.log('audio streaming');
 	video = ffmpeg(FEED, { timeout: 432000 }).addOptions([
 	// can change options here - must be supported by browser
@@ -71,7 +71,7 @@ if (type == 'a' && FEED){
 	startFeed();
 }
 // if you have a direct video feed 
-else if (type == 'v' && FEED){
+else if (TYPE == 'v' && FEED){
 	console.log('video streaming');
 	video = ffmpeg(FEED, { timeout: 432000 }).addOptions([
 	// can change options here - must be supported by browser
@@ -115,7 +115,7 @@ function startFeed() {
 }
 // HTTP actions for client
 app.get('/', (req, res) => { 
-	if(type == 'a'){
+	if(TYPE == 'a'){
 		res.sendFile(path.resolve(__dirname, './fMP4-audio.html'))
 	}else{	
 		res.sendFile(path.resolve(__dirname, './fMP4-video.html'))
