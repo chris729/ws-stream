@@ -13,7 +13,7 @@ var initBlock = [];
 
 const PORT = process.env.PORT || 3000;
 const FEED = process.env.FEED || false;
-const type = 'v';
+const TYPE = process.env.FEED || 'v';
 
 // create a socket server
 const socketServer = new WebSocket.Server({
